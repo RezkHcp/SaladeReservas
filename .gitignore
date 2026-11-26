@@ -1,0 +1,21 @@
+# Compilación de .NET
+bin/
+obj/
+publish/
+*.user
+*.suo
+.vs/
+.vscode/
+.idea/
+
+# Configuración con secretos: solo en el servidor, nunca en el repositorio
+appsettings.Production.json
+appsettings.*.local.json
+*.pfx
+
+# Registros de IIS (stdout)
+logs/
+
+# Sistema
+.DS_Store
+Thumbs.db

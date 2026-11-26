@@ -90,7 +90,9 @@ button:focus-visible, input:focus-visible { outline: .2rem solid var(--violet); 
   border-bottom: 1px solid currentColor; margin-bottom: 1.1rem; padding: .5rem 0 1rem;
 }
 .state {
-  font-family: var(--font-head); font-weight: 400; margin: .5rem 0 1rem;
+  /* Con line-height < 1 los trazos descendentes (la «p» de «Ocupada») sobresalen de la caja
+     unos 0,18em: el margen inferior en em lo compensa para que no pisen el subtítulo. */
+  font-family: var(--font-head); font-weight: 400; margin: .5rem 0 calc(.2em + .6rem);
   font-size: clamp(5rem, min(18vw, 24vh), 15rem);
   line-height: .86; letter-spacing: -.045em; word-spacing: -.1em;
 }
