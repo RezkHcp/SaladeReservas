@@ -1,0 +1,172 @@
+<div id="app" class="kiosk is-loading">
+
+  <!-- ===== Panel principal ===== -->
+  <main class="main">
+    <header class="hdr">
+      <svg class="logo" role="img" aria-label="HCP"><use href="#hcp-logo"/></svg>
+      <div class="clock">
+        <div id="time" class="time">--:--</div>
+        <div id="date" class="date">&nbsp;</div>
+      </div>
+    </header>
+
+    <section class="status" aria-live="polite">
+      <div class="eyebrow"><span id="roomName">@ViewBag.RoomName</span> <span class="sep">/</span> Estado actual</div>
+      <h1 id="stateLabel" class="state">Libre</h1>
+      <div id="stateSub" class="state-sub">&nbsp;</div>
+    </section>
+
+    <section id="focusCard" class="focus d-none">
+      <div id="focusLabel" class="eyebrow">Reunión actual</div>
+      <div id="focusTitle" class="focus-title"></div>
+      <div class="focus-meta">
+        <span id="focusTime" class="focus-time"></span>
+        <span id="focusOrg" class="focus-org"></span>
+      </div>
+    </section>
+
+    <div id="viewing" class="viewing d-none">
+      <span id="viewingText"></span>
+      <button id="btnBackToday" type="button" class="link-btn">Volver a hoy</button>
+    </div>
+    <div id="errorBar" class="errbar d-none" role="alert"></div>
+
+    <button id="btnBook" type="button" class="btn-book">
+      <span id="bookLabel">Reservar</span>
+      <svg class="plus" aria-hidden="true"><use href="#hcp-plus"/></svg>
+    </button>
+  </main>
+
+  <!-- ===== Panel lateral: agenda ===== -->
+  <aside class="side">
+    <div class="eyebrow">Agenda</div>
+
+    <div class="daynav">
+      <button id="btnPrev" type="button" class="icon-btn" aria-label="Día anterior"><svg><use href="#i-prev"/></svg></button>
+      <div class="daylabel">
+        <div id="dayShort" class="day-short">Hoy</div>
+        <div id="dayLong" class="day-long">&nbsp;</div>
+      </div>
+      <button id="btnNext" type="button" class="icon-btn" aria-label="Día siguiente"><svg><use href="#i-next"/></svg></button>
+    </div>
+
+    <div class="daytools">
+      <button id="btnCal" type="button" class="tool-btn"><svg><use href="#i-cal"/></svg><span>Elegir día</span></button>
+      <button id="btnToday" type="button" class="tool-btn d-none"><span>Hoy</span></button>
+    </div>
+
+    <h2 id="agendaTitle" class="eyebrow agenda-title">Próximas reuniones</h2>
+    <ul id="agenda" class="agenda"></ul>
+    <div id="agendaEmpty" class="agenda-empty d-none">No hay más reuniones hoy</div>
+
+    <footer class="side-foot">
+      <span class="eyebrow">Actualizado <span id="updated">--:--</span></span>
+      <button id="btnFs" type="button" class="icon-btn small" aria-label="Pantalla completa"><svg><use href="#i-fs"/></svg></button>
+    </footer>
+  </aside>
+</div>
+
+<!-- ===== Hoja de reserva (pantalla completa) ===== -->
+<div id="bookSheet" class="overlay" aria-hidden="true">
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+    <header class="sheet-head">
+      <div>
+        <div class="eyebrow">@ViewBag.RoomName</div>
+        <h2 id="sheetTitle" class="sheet-title">Nueva reserva</h2>
+      </div>
+      <button id="btnSheetClose" type="button" class="icon-btn" aria-label="Cerrar"><svg><use href="#i-close"/></svg></button>
+    </header>
+
+    <div id="sheetBody" class="sheet-body">
+      <div class="col">
+        <label class="field">
+          <span class="eyebrow">Título de la reunión</span>
+          <input id="fTitle" class="vk-input" type="text" inputmode="none" maxlength="120" autocomplete="off" autocapitalize="sentences" placeholder="Ej. Revisión de proyecto" />
+        </label>
+        <label class="field">
+          <span class="eyebrow">Tu nombre (opcional)</span>
+          <input id="fName" class="vk-input" type="text" inputmode="none" maxlength="80" autocomplete="off" placeholder="Nombre y apellido" />
+        </label>
+        <div id="summary" class="summary"></div>
+        <div id="bookMsg" class="msg d-none" role="alert"></div>
+      </div>
+
+      <div class="col">
+        <div class="field">
+          <span class="eyebrow">Día</span>
+          <div class="daypick">
+            <button id="bkPrev" type="button" class="icon-btn" aria-label="Día anterior"><svg><use href="#i-prev"/></svg></button>
+            <button id="bkDay" type="button" class="daypick-main"><svg><use href="#i-cal"/></svg><span id="bkDayText">—</span></button>
+            <button id="bkNext" type="button" class="icon-btn" aria-label="Día siguiente"><svg><use href="#i-next"/></svg></button>
+          </div>
+        </div>
+        <div class="field">
+          <span class="eyebrow">Duración</span>
+          <div id="durations" class="chips"></div>
+        </div>
+        <div class="field">
+          <span class="eyebrow">Hora de inicio <span id="slotsHint" class="hint"></span></span>
+          <div id="slots" class="slots"></div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="sheet-foot">
+      <button id="btnCancel" type="button" class="btn-ghost">Cancelar</button>
+      <button id="btnConfirm" type="button" class="btn-primary" disabled>Confirmar reserva</button>
+    </footer>
+
+    <div id="done" class="done d-none" role="status">
+      <svg class="done-plus" aria-hidden="true"><use href="#hcp-plus"/></svg>
+      <div class="done-title">Reserva confirmada</div>
+      <div id="doneText" class="done-text"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Selector de día (calendario) ===== -->
+<div id="calOverlay" class="overlay overlay-top" aria-hidden="true">
+  <div class="scrim" data-close="cal"></div>
+  <div class="dialog" role="dialog" aria-modal="true" aria-label="Elegir día">
+    <div class="cal-head">
+      <button id="calPrev" type="button" class="icon-btn" aria-label="Mes anterior"><svg><use href="#i-prev"/></svg></button>
+      <div id="calTitle" class="cal-title">noviembre 2026</div>
+      <button id="calNext" type="button" class="icon-btn" aria-label="Mes siguiente"><svg><use href="#i-next"/></svg></button>
+    </div>
+    <div id="calWeek" class="cal-week"></div>
+    <div id="calGrid" class="cal-grid"></div>
+    <div class="cal-foot">
+      <button id="calToday" type="button" class="btn-ghost">Hoy</button>
+      <button id="calClose" type="button" class="btn-ghost">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Detalle de reunión ===== -->
+<div id="meetOverlay" class="overlay overlay-top" aria-hidden="true">
+  <div class="scrim" data-close="meet"></div>
+  <div class="dialog meet" role="dialog" aria-modal="true" aria-labelledby="mtTitle">
+    <div class="meet-top">
+      <span id="mtBadge" class="meet-badge">Reunión</span>
+      <button id="mtClose" type="button" class="icon-btn" aria-label="Cerrar"><svg><use href="#i-close"/></svg></button>
+    </div>
+    <h2 id="mtTitle" class="meet-title"></h2>
+    <dl class="meet-grid">
+      <div><dt>Día</dt><dd id="mtDate"></dd></div>
+      <div><dt>Horario</dt><dd id="mtTime"></dd></div>
+      <div><dt>Duración</dt><dd id="mtDur"></dd></div>
+      <div><dt>Organiza</dt><dd id="mtOrg"></dd></div>
+      <div><dt>Sala</dt><dd id="mtRoom"></dd></div>
+      <div><dt>Teams</dt><dd id="mtTeams"></dd></div>
+    </dl>
+    <button id="mtOk" type="button" class="btn-ghost">Cerrar</button>
+  </div>
+</div>
+
+<!-- ===== Teclado táctil integrado ===== -->
+<div id="vk" class="vk" aria-hidden="true"></div>
+
+@section Scripts {
+  <script>window.ROOM_CFG = @Html.Raw(ViewBag.Cfg);</script>
+  <script src="~/js/room.js" asp-append-version="true"></script>
+}

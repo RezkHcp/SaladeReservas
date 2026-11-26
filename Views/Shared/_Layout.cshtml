@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="color-scheme" content="dark light" />
+  <title>@ViewBag.RoomName · HCP</title>
+  <link rel="manifest" href="~/manifest.webmanifest" />
+  <link rel="icon" type="image/svg+xml" href="~/img/favicon.svg" />
+  <link rel="apple-touch-icon" href="~/img/icon-192.png" />
+  <link rel="stylesheet" href="~/lib/bootstrap/bootstrap.min.css" />
+  <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+  @await Html.PartialAsync("_Sprite")
+  @RenderBody()
+  @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

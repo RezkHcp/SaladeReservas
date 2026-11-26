@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Sala HCP (kiosco)
+Comment=Abre la reserva de sala en pantalla completa al iniciar sesión
+# Ajusta la ruta, la URL y la clave. Copia este archivo a ~/.config/autostart/
+Exec=env SALA_URL=https://servidor.tudominio.com/salareservas/ SALA_KEY=CAMBIA-ESTA-CLAVE /home/kiosk/sala-kiosk/start-kiosk.sh
+Terminal=false
+X-GNOME-Autostart-enabled=true
