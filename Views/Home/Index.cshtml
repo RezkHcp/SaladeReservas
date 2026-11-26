@@ -84,10 +84,11 @@
           <input id="fTitle" class="vk-input" type="text" inputmode="none" maxlength="120" autocomplete="off" autocapitalize="sentences" placeholder="Ej. Revisión de proyecto" />
         </label>
         <label class="field">
-          <span class="eyebrow">Tu nombre (opcional)</span>
+          <span class="eyebrow">Tu nombre</span>
           <input id="fName" class="vk-input" type="text" inputmode="none" maxlength="80" autocomplete="off" placeholder="Nombre y apellido" />
         </label>
         <div id="summary" class="summary"></div>
+        <div id="missing" class="missing d-none"></div>
         <div id="bookMsg" class="msg d-none" role="alert"></div>
       </div>
 
@@ -106,7 +107,11 @@
         </div>
         <div class="field">
           <span class="eyebrow">Hora de inicio <span id="slotsHint" class="hint"></span></span>
-          <div id="slots" class="slots"></div>
+          <div id="slots" class="hours"></div>
+        </div>
+        <div class="field">
+          <span class="eyebrow">Minutos</span>
+          <div id="quarters" class="quarters"></div>
         </div>
       </div>
     </div>

@@ -294,3 +294,205 @@ body.kb-open .sheet-body { padding-bottom: 19rem; }
 .meet-grid dt { font-family: var(--font-mono); font-size: .72rem; text-transform: uppercase; color: #555; font-weight: 400; }
 .meet-grid dd { margin: .2rem 0 0; font-size: 1.15rem; overflow-wrap: anywhere; }
 .meet .btn-ghost { width: 100%; }
+
+/* =========================================================
+   Transiciones y botones flotantes
+   ========================================================= */
+:root {
+  --ease-out: cubic-bezier(.2, .8, .2, 1);
+  --t-fast: .18s;
+  --t-med: .34s;
+  --float-shadow: 0 .9rem 2rem rgba(0, 0, 0, .28), 0 .2rem .5rem rgba(0, 0, 0, .18);
+  --float-shadow-press: 0 .3rem .8rem rgba(0, 0, 0, .25);
+}
+
+/* Superposiciones: siempre en el DOM; se muestran/ocultan con opacidad y desplazamiento */
+.overlay { display: block; visibility: hidden; pointer-events: none; transition: visibility 0s linear var(--t-med); }
+.overlay.open { visibility: visible; pointer-events: auto; transition: visibility 0s; }
+.scrim { opacity: 0; transition: opacity var(--t-med) ease; }
+.overlay.open .scrim { opacity: 1; }
+
+/* Hoja de reserva: sube desde abajo */
+.sheet { transform: translateY(100%); transition: transform var(--t-med) var(--ease-out); }
+.overlay.open .sheet { transform: none; }
+
+/* Calendario y detalle: aparecen con un pequeño zoom */
+.dialog {
+  opacity: 0; transform: translate(-50%, -46%) scale(.96);
+  transition: opacity var(--t-fast) ease, transform var(--t-med) var(--ease-out);
+  box-shadow: 0 2rem 4rem rgba(0, 0, 0, .35);
+}
+.overlay.open .dialog { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+/* Teclado táctil: se desliza */
+.vk { display: block; visibility: hidden; transform: translateY(105%);
+      transition: transform var(--t-med) var(--ease-out), visibility 0s linear var(--t-med); }
+.vk.open { visibility: visible; transform: none; transition: transform var(--t-med) var(--ease-out), visibility 0s; }
+
+/* Cambio Libre ⇄ Ocupada */
+@keyframes state-in { from { opacity: 0; transform: translateY(.35em); } to { opacity: 1; transform: none; } }
+.state.swap, .state-sub.swap { animation: state-in .5s var(--ease-out) both; }
+.state-sub.swap { animation-delay: .08s; }
+
+/* Agenda: se desliza según el sentido del cambio de día */
+@keyframes from-right { from { opacity: 0; transform: translateX(2.5rem); } to { opacity: 1; transform: none; } }
+@keyframes from-left  { from { opacity: 0; transform: translateX(-2.5rem); } to { opacity: 1; transform: none; } }
+.agenda.go-next li, .daylabel.go-next { animation: from-right .32s var(--ease-out) both; }
+.agenda.go-prev li, .daylabel.go-prev { animation: from-left .32s var(--ease-out) both; }
+.agenda.go-next li:nth-child(2), .agenda.go-prev li:nth-child(2) { animation-delay: .04s; }
+.agenda.go-next li:nth-child(3), .agenda.go-prev li:nth-child(3) { animation-delay: .08s; }
+.agenda.go-next li:nth-child(n+4), .agenda.go-prev li:nth-child(n+4) { animation-delay: .12s; }
+
+/* Elementos que aparecen (al quitar .d-none) */
+@keyframes pop-in { from { opacity: 0; transform: translateY(.8rem) scale(.98); } to { opacity: 1; transform: none; } }
+.focus:not(.d-none), .errbar:not(.d-none), .msg:not(.d-none) { animation: pop-in .32s var(--ease-out) both; }
+
+/* Reserva confirmada */
+@keyframes done-bg { from { clip-path: circle(0% at 80% 92%); } to { clip-path: circle(150% at 80% 92%); } }
+@keyframes done-plus { 0% { transform: scale(0) rotate(-90deg); } 70% { transform: scale(1.12) rotate(0); } 100% { transform: scale(1); } }
+.done:not(.d-none) { animation: done-bg .55s var(--ease-out) both; }
+.done:not(.d-none) .done-plus { animation: done-plus .6s .15s var(--ease-out) both; }
+.done:not(.d-none) .done-title, .done:not(.d-none) .done-text { animation: pop-in .45s .25s var(--ease-out) both; }
+
+/* ---------- Botones flotantes ---------- */
+.main { position: relative; }
+.btn-book {
+  box-shadow: var(--float-shadow);
+  transition: transform .15s var(--ease-out), box-shadow .15s var(--ease-out);
+}
+.btn-book:active { transform: translateY(.2rem) scale(.99); box-shadow: var(--float-shadow-press); }
+.btn-book .plus { transition: transform .3s var(--ease-out); }
+.btn-book:active .plus { transform: rotate(90deg); }
+
+/* «Consultando otro día»: píldora flotante sobre el panel principal */
+.viewing {
+  position: absolute; left: 50%; top: 2.9rem; transform: translateX(-50%);
+  z-index: 5; margin: 0; border-radius: 999px; padding: .5rem .6rem .5rem 1.3rem; white-space: nowrap;
+  box-shadow: var(--float-shadow);
+}
+.viewing:not(.d-none) { animation: float-up .38s var(--ease-out) both; }
+@keyframes float-up { from { opacity: 0; transform: translate(-50%, -1.2rem); } to { opacity: 1; transform: translateX(-50%); } }
+.viewing .link-btn { background: var(--lime); color: var(--black); text-decoration: none; border-radius: 999px; padding: 0 1.1rem; }
+
+/* Barra de acciones flotante en la hoja de reserva */
+.sheet-foot {
+  position: absolute; left: 0; right: 0; bottom: 0; border-top: 0; pointer-events: none;
+  background: linear-gradient(to top, var(--paper) 45%, rgba(243, 243, 243, 0));
+  padding-top: 2.4rem;
+}
+.sheet-foot > * { pointer-events: auto; box-shadow: var(--float-shadow); }
+.sheet-foot .btn-ghost { background: var(--white); }
+.sheet-body { padding-bottom: 7rem; }
+body.kb-open .sheet-body { padding-bottom: 19rem; }
+.btn-primary, .btn-ghost { transition: transform .15s var(--ease-out), box-shadow .15s, background-color .2s, color .2s; }
+.btn-primary:active:not(:disabled), .btn-ghost:active { box-shadow: var(--float-shadow-press); }
+.btn-primary:disabled { box-shadow: none; }
+
+/* Botones de día, duración y hora: respuesta al toque */
+.icon-btn, .chip, .slot, .tool-btn, .cal-grid button { transition: transform .12s var(--ease-out), background-color .2s, color .2s; }
+.icon-btn:active:not(:disabled), .chip:active, .slot:active:not(:disabled), .tool-btn:active, .cal-grid button:active:not(:disabled) { transform: scale(.94); }
+
+/* Quien tenga activado «reducir movimiento» no ve animaciones */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* =========================================================
+   Hoja de reserva con fotografía de fondo
+   La foto se oscurece para que todos los controles (sólidos) destaquen.
+   ========================================================= */
+.sheet {
+  color: var(--white);
+  background:
+    linear-gradient(180deg, rgba(0, 0, 0, .35) 0%, rgba(0, 0, 0, .62) 35%, rgba(0, 0, 0, .78) 100%),
+    url("../img/fondo-reserva.webp") center 40% / cover no-repeat,
+    #111;
+}
+.sheet .eyebrow { color: rgba(255, 255, 255, .85); text-shadow: 0 1px 2px rgba(0, 0, 0, .6); }
+.sheet-head { border-color: rgba(255, 255, 255, .7); }
+.sheet-title { text-shadow: 0 2px 12px rgba(0, 0, 0, .45); }
+.hint { color: rgba(255, 255, 255, .7); }
+
+/* Controles sólidos y con sombra: siempre por encima de la foto */
+.sheet .icon-btn, .daypick-main, .field input, .chip, .slot, .sheet-foot .btn-ghost {
+  background: var(--white); color: var(--black); border: 0;
+  box-shadow: 0 .35rem 1rem rgba(0, 0, 0, .35);
+}
+.sheet .icon-btn:active:not(:disabled) { background: #ddd; }
+.sheet .icon-btn:disabled { opacity: 1; background: rgba(255, 255, 255, .25); color: rgba(255, 255, 255, .6); box-shadow: none; }
+.field input:focus { outline: .25rem solid var(--lime); }
+
+/* Seleccionado: lima, lo más visible de la pantalla */
+.chip.on, .slot.on { background: var(--lime); color: var(--black); box-shadow: 0 0 0 .2rem var(--black), 0 .5rem 1.4rem rgba(216, 255, 0, .35); }
+
+/* Horas ocupadas: translúcidas, se distinguen pero no compiten */
+.slot:disabled { background: rgba(255, 255, 255, .12); color: rgba(255, 255, 255, .45); border: 1px dashed rgba(255, 255, 255, .3); box-shadow: none; }
+
+.summary { border-top-color: rgba(255, 255, 255, .7); }
+.summary b { color: var(--black); }
+
+/* Barra inferior: degradado oscuro en lugar de claro */
+.sheet-foot { background: linear-gradient(to top, rgba(0, 0, 0, .85) 40%, rgba(0, 0, 0, 0)); }
+.btn-primary { background: var(--lime); color: var(--black); }
+.btn-primary:disabled { background: rgba(255, 255, 255, .25); color: rgba(255, 255, 255, .6); }
+
+/* =========================================================
+   Hoja de reserva ajustada a la tablet: sin desplazamiento
+   ========================================================= */
+.sheet-body { overflow-y: auto; align-content: start; padding-top: 1rem; padding-bottom: 6.5rem; }
+.field { margin-bottom: 1rem; }
+.field > .eyebrow { margin-bottom: .45rem; }
+
+/* Duraciones: una sola fila */
+.chips { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .4rem; }
+.chip { min-width: 0; padding: 0 .2rem; font-size: 1.1rem; }
+
+/* Horas: «Ahora» ocupa 2 casillas + 14 horas = 2 filas de 8 */
+.hours { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: .4rem; }
+.hours .slot { padding: 0; min-width: 0; }
+.hours .slot.now { grid-column: span 2; font-size: 1.05rem; }
+/* Hora con algún cuarto ocupado: marca en la esquina */
+.slot.partial { position: relative; }
+.slot.partial::after { content: ""; position: absolute; right: .35rem; top: .35rem; width: .45rem; height: .45rem; border-radius: 50%; background: var(--pink); }
+
+/* Minutos: 4 botones grandes */
+.quarters { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .4rem; }
+.quarters .slot { min-height: 3.8rem; font-size: 1.4rem; }
+
+/* Pantallas bajas (tablets de 7–8" en horizontal) */
+@media (max-height: 700px) and (orientation: landscape) {
+  .sheet-head { margin-top: .6rem; padding: .5rem 0; }
+  .sheet-title { font-size: 2rem; }
+  .field input { height: 3.4rem; }
+  .chip, .slot, .daypick-main, .sheet .icon-btn { min-height: 3rem; height: auto; }
+  .daypick { grid-template-columns: 3rem 1fr 3rem; }
+  .sheet .icon-btn { width: 3rem; height: 3rem; }
+  .daypick-main { height: 3rem; }
+  .quarters .slot { min-height: 3.2rem; }
+  .btn-ghost, .btn-primary { min-height: 3.6rem; }
+  .sheet-body { padding-bottom: 5.5rem; }
+}
+
+/* Tablet en vertical: agenda compacta para que quepan las reuniones sin desplazarse */
+@media (orientation: portrait) {
+  .state { font-size: clamp(4.5rem, min(16vw, 13vh), 13rem); }
+  .side {
+    display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: .8rem;
+    grid-template-rows: auto auto auto minmax(0, 1fr) auto; padding-top: 1.2rem;
+  }
+  .side > .eyebrow:first-child, .agenda-title, .agenda, .agenda-empty, .side-foot { grid-column: 1 / -1; }
+  .daynav { grid-column: 1; grid-row: 2; margin: .6rem 0; }
+  .daytools { grid-column: 2; grid-row: 2; margin: .6rem 0; align-self: center; }
+  .daytools .tool-btn { min-height: 3.6rem; padding: 0 1.3rem; flex: none; }
+  .agenda-title { grid-row: 3; }
+  .agenda, .agenda-empty { grid-row: 4; }
+  .side-foot { grid-row: 5; }
+  .agenda li { padding: .7rem 0; }
+}
+
+/* Aviso de datos que faltan para poder confirmar */
+.missing {
+  display: inline-block; margin-top: .8rem; padding: .45rem .8rem; border-radius: var(--radius);
+  background: rgba(0, 0, 0, .55); color: var(--white); border-left: .3rem solid var(--pink);
+  font-family: var(--font-mono); font-size: .85rem; text-transform: uppercase; letter-spacing: .03em;
+}

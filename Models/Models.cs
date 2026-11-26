@@ -65,8 +65,9 @@ public class BookingRequest
     [Required, StringLength(120, MinimumLength = 2)]
     public string Title { get; set; } = "";
 
-    [StringLength(80)]
-    public string? Organizer { get; set; }
+    /// <summary>Nombre de quien reserva (obligatorio).</summary>
+    [Required, StringLength(80, MinimumLength = 2)]
+    public string Organizer { get; set; } = "";
 
     /// <summary>Día en hora de la sala, yyyy-MM-dd.</summary>
     [Required]

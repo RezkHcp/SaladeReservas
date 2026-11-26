@@ -58,6 +58,11 @@
   function openOv(el) { el.classList.add('open'); el.setAttribute('aria-hidden', 'false'); }
   function closeOv(el) { el.classList.remove('open'); el.setAttribute('aria-hidden', 'true'); }
   const isOpen = el => el.classList.contains('open');
+  /* Reinicia una animación CSS añadiendo la clase de nuevo */
+  function replay(el, cls, remove = []) {
+    el.classList.remove(cls, ...remove); void el.offsetWidth; el.classList.add(cls);
+  }
+  let lastState = null, lastRenderedDate = null;
 
   /* =========================================================
      Panel principal y agenda
@@ -93,6 +98,8 @@
     $('app').classList.toggle('is-busy', busy);
     $('app').classList.toggle('is-free', !busy);
     setText('stateLabel', busy ? 'Ocupada' : 'Libre');
+    if (lastState !== null && lastState !== busy) { replay($('stateLabel'), 'swap'); replay($('stateSub'), 'swap'); }
+    lastState = busy;
     setText('roomName', s.roomName || '');
     showError(s.error || '');
 
@@ -121,7 +128,7 @@
     $('btnNext').disabled = v >= maxDateStr();
     show('btnToday', !isToday);
     show('viewing', !isToday);
-    if (!isToday) setText('viewingText', 'Consultando ' + longDate(v));
+    if (!isToday) setText('viewingText', 'Viendo ' + shortDate(v));
     setText('bookLabel', isToday ? 'Reservar sala' : 'Reservar el ' + shortDate(v));
 
     // Agenda del día mostrado
@@ -133,6 +140,11 @@
     show('agendaEmpty', items.length === 0);
 
     const ul = $('agenda');
+    if (lastRenderedDate && s.date !== lastRenderedDate) {
+      const cls = s.date > lastRenderedDate ? 'go-next' : 'go-prev', other = cls === 'go-next' ? 'go-prev' : 'go-next';
+      replay(ul, cls, [other]); replay(document.querySelector('.daylabel'), cls, [other]);
+    }
+    lastRenderedDate = s.date;
     ul.textContent = '';
     items.forEach((m, i) => {
       const li = document.createElement('li');
@@ -309,19 +321,36 @@
       dBox.append(b);
     });
 
-    // Horas (las ocupadas o pasadas salen deshabilitadas)
+    // Hora de inicio en dos pasos para que todo quepa en la tablet sin desplazarse:
+    // 1) «Ahora» + una fila de horas en punto, 2) los cuartos (:00 :15 :30 :45) de la hora elegida.
     const slots = slotList();
     if (!slots.some(x => x.key === bk.start && x.ok)) bk.start = (slots.find(x => x.ok) || {}).key ?? null;
+    const quarters = slots.filter(x => !x.now);
+    const hourOf = x => Math.floor(x.min / 60);
+    if (bk.start !== 'now' && bk.start != null) bk.hour = Math.floor(bk.start / 60);
+    else if (bk.start === 'now') bk.hour = Math.floor(nowMin() / 60);
+    const hours = [...new Set(quarters.map(hourOf))];
+
     const sBox = $('slots'); sBox.textContent = '';
-    slots.forEach(x => {
+    const mk = (label, cls, ok, on, onclick) => {
       const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'slot' + (x.now ? ' now' : '') + (x.key === bk.start ? ' on' : '');
-      b.textContent = x.now ? 'Ahora (' + hhmm(x.min) + ')' : x.label;
-      b.disabled = !x.ok;
-      b.onclick = () => { bk.start = x.key; renderBook(); };
+      b.type = 'button'; b.className = cls + (on ? ' on' : ''); b.textContent = label; b.disabled = !ok; b.onclick = onclick;
+      return b;
+    };
+    const nowSlot = slots.find(x => x.now);
+    if (nowSlot) sBox.append(mk('Ahora · ' + hhmm(nowSlot.min), 'slot now', nowSlot.ok, bk.start === 'now',
+      () => { bk.start = 'now'; renderBook(); }));
+    hours.forEach(h => {
+      const qs = quarters.filter(x => hourOf(x) === h), free = qs.filter(x => x.ok);
+      const b = mk(pad(h), 'slot hour' + (free.length && free.length < qs.length ? ' partial' : ''), free.length > 0,
+        bk.start !== 'now' && bk.start != null && Math.floor(bk.start / 60) === h,
+        () => { bk.start = free[0].key; renderBook(); });
       sBox.append(b);
     });
+
+    const qBox = $('quarters'); qBox.textContent = '';
+    quarters.filter(x => hourOf(x) === bk.hour).forEach(x =>
+      qBox.append(mk(x.label, 'slot', x.ok, x.key === bk.start, () => { bk.start = x.key; renderBook(); })));
     const anyOk = slots.some(x => x.ok);
     setText('slotsHint', anyOk ? '' : '— no hay huecos libres con esta duración');
 
@@ -338,9 +367,16 @@
   }
 
   function updateConfirm() {
-    $('btnConfirm').disabled = bk.busy || $('fTitle').value.trim().length < 2 || bk.start == null;
+    const falta = [];
+    if ($('fTitle').value.trim().length < 2) falta.push('el título');
+    if ($('fName').value.trim().length < 2) falta.push('tu nombre');
+    if (bk.start == null) falta.push('la hora');
+    $('btnConfirm').disabled = bk.busy || falta.length > 0;
+    setText('missing', falta.length ? 'Falta indicar ' + falta.join(' y ').replace(/ y (?=.* y )/, ', ') : '');
+    show('missing', falta.length > 0);
   }
   $('fTitle').addEventListener('input', updateConfirm);
+  $('fName').addEventListener('input', updateConfirm);
 
   function showMsg(t, warn) { const m = $('bookMsg'); m.textContent = t; m.classList.toggle('warn', !!warn); m.classList.remove('d-none'); }
   function hideMsg() { $('bookMsg').classList.add('d-none'); }

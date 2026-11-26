@@ -177,7 +177,7 @@ public abstract class RoomServiceBase : IRoomService
         var title = new string(req.Title.Where(c => !char.IsControl(c)).ToArray()).Trim();
         if (title.Length < 2) return new(false, "Escribe un título para la reunión.");
         var organizer = new string((req.Organizer ?? "").Where(c => !char.IsControl(c)).ToArray()).Trim();
-        if (organizer.Length == 0) organizer = "Tablet de la sala";
+        if (organizer.Length < 2) return new(false, "Escribe tu nombre para hacer la reserva.");
 
         await BookingLock.WaitAsync(ct);
         try

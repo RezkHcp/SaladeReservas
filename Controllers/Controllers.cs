@@ -72,7 +72,7 @@ public class ApiController : ControllerBase
             return BadRequest(new BookingResult(false, "Sesión caducada. Vuelve a intentarlo."));
         }
         if (!ModelState.IsValid)
-            return BadRequest(new BookingResult(false, "Datos no válidos: indica un título (mínimo 2 caracteres)."));
+            return BadRequest(new BookingResult(false, "Datos no válidos: indica el título y tu nombre (mínimo 2 caracteres cada uno)."));
 
         var result = await _rooms.BookAsync(req, ct);
         return result.Success ? Ok(result) : Conflict(result);
