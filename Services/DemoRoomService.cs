@@ -33,7 +33,7 @@ public class DemoRoomService : RoomServiceBase
             return Task.FromResult(_events.Where(e => e.StartUtc < toUtc && e.EndUtc > fromUtc).ToList());
     }
 
-    protected override Task<RawEvent> CreateEventAsync(string title, string organizer, DateTime startUtc, DateTime endUtc, CancellationToken ct)
+    protected override Task<RawEvent> CreateEventAsync(string title, string organizer, string? organizerEmail, DateTime startUtc, DateTime endUtc, CancellationToken ct)
     {
         var ev = new RawEvent(Guid.NewGuid().ToString(), title, organizer, startUtc, endUtc, Room.CreateTeamsMeeting, false);
         lock (_gate) _events.Add(ev);

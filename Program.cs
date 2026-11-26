@@ -8,11 +8,19 @@ var builder = WebApplication.CreateBuilder(args);
 // Secretos: appsettings < variables de entorno (Graph__ClientSecret) < user-secrets (desarrollo).
 builder.Services.Configure<GraphOptions>(builder.Configuration.GetSection("Graph"));
 builder.Services.Configure<RoomOptions>(builder.Configuration.GetSection("Room"));
+builder.Services.Configure<DirectoryOptions>(builder.Configuration.GetSection("Directory"));
+builder.Services.AddMemoryCache();
 
 if (builder.Configuration.GetValue<bool>("Room:DemoMode"))
+{
     builder.Services.AddSingleton<IRoomService, DemoRoomService>();
+    builder.Services.AddSingleton<IDirectoryService, DemoDirectoryService>();   // directorio de ejemplo
+}
 else
+{
     builder.Services.AddSingleton<IRoomService, GraphRoomService>();
+    builder.Services.AddSingleton<IDirectoryService, GraphDirectoryService>();  // Entra ID (Active Directory)
+}
 
 builder.Services.AddControllersWithViews()
     .ConfigureApiBehaviorOptions(o => o.SuppressModelStateInvalidFilter = true); // respondemos con nuestro JSON

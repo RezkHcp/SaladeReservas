@@ -271,6 +271,7 @@
     bk.start = null;
     bk.meetings = status && status.date === bk.date ? status.meetings : [];
     $('fTitle').value = ''; $('fName').value = '';
+    setPerson(null); People.hide();
     hideMsg(); show('done', false);
     openOv($('bookSheet'));
     renderBook();
@@ -369,7 +370,8 @@
   function updateConfirm() {
     const falta = [];
     if ($('fTitle').value.trim().length < 2) falta.push('el título');
-    if ($('fName').value.trim().length < 2) falta.push('tu nombre');
+    if (CFG.directory ? !bk.person : $('fName').value.trim().length < 2)
+      falta.push(CFG.directory && $('fName').value.trim().length >= 2 ? 'tu nombre (elígelo de la lista)' : 'tu nombre');
     if (bk.start == null) falta.push('la hora');
     $('btnConfirm').disabled = bk.busy || falta.length > 0;
     setText('missing', falta.length ? 'Falta indicar ' + falta.join(' y ').replace(/ y (?=.* y )/, ', ') : '');
@@ -392,7 +394,8 @@
         headers: { 'Content-Type': 'application/json', 'RequestVerificationToken': tk.token },
         body: JSON.stringify({
           title: $('fTitle').value.trim(),
-          organizer: $('fName').value.trim(),
+          organizer: bk.person ? bk.person.name : $('fName').value.trim(),
+          organizerEmail: bk.person ? bk.person.email : null,
           date: bk.date,
           start: bk.start === 'now' ? 'now' : hhmm(bk.start),
           minutes: bk.minutes
@@ -532,6 +535,7 @@
     function close() {
       el.classList.remove('open'); el.setAttribute('aria-hidden', 'true');
       document.body.classList.remove('kb-open');
+      document.dispatchEvent(new Event('vk:close'));
     }
 
     document.addEventListener('focusin', e => { if (e.target.classList && e.target.classList.contains('vk-input')) open(e.target); });
@@ -539,10 +543,101 @@
     document.addEventListener('pointerdown', e => {
       if (!el.classList.contains('open')) return;
       if (el.contains(e.target) || (e.target.classList && e.target.classList.contains('vk-input'))) return;
+      if (e.target.closest && e.target.closest('[data-keep-kb]')) return;
       close();
     }, true);
     document.addEventListener('keyup', () => paint());
     return { close };
+  })();
+
+  /* =========================================================
+     Buscador de personas (Active Directory / Microsoft Entra ID)
+     Al escribir el nombre aparece una lista con las personas del directorio.
+     En horizontal ocupa la columna derecha; en vertical, el hueco bajo el campo.
+     ========================================================= */
+  function setPerson(p) {
+    bk.person = p;
+    const sel = $('personSel');
+    sel.textContent = '';
+    if (p) {
+      const ok = document.createElement('span'); ok.className = 'ps-ok'; ok.textContent = '✓';
+      sel.append(ok, ' ' + p.email);
+    }
+    show('personSel', !!p);
+    $('fName').classList.toggle('has-person', !!p);
+  }
+
+  const People = (() => {
+    const box = $('people'), list = $('peopleList'), empty = $('peopleEmpty');
+    const fold = t => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    const COLORS = ['#D8FF00', '#6B35FF', '#FF006E', '#888888'];
+    const initials = n => n.split(' ').filter(Boolean).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    let seq = 0, timer = null;
+
+    function place() {
+      const vkEl = $('vk'), vkTop = vkEl.classList.contains('open') ? innerHeight - vkEl.offsetHeight : innerHeight;
+      let left, top, width;
+      if (innerWidth > innerHeight) {          // horizontal: sobre la columna derecha
+        const col = document.querySelectorAll('#sheetBody .col')[1].getBoundingClientRect();
+        left = col.left; top = col.top; width = col.width;
+      } else {                                  // vertical: bajo el campo del nombre
+        const r = $('fName').getBoundingClientRect();
+        left = r.left; top = r.bottom + 8; width = r.width;
+      }
+      Object.assign(box.style, { left: left + 'px', top: top + 'px', width: width + 'px', maxHeight: Math.max(160, vkTop - top - 12) + 'px' });
+    }
+    function hide() { box.classList.add('d-none'); }
+    function showMsg(t) { list.textContent = ''; empty.textContent = t; empty.classList.remove('d-none'); setText('peopleCount', ''); }
+
+    function mark(name, q) {                    // resalta las letras buscadas al principio de cada palabra
+      const toks = fold(q).split(/\s+/).filter(Boolean), f = fold(name), frag = document.createDocumentFragment();
+      const on = new Array(name.length).fill(false);
+      toks.forEach(t => { let i = -1; while ((i = f.indexOf(t, i + 1)) !== -1) if (i === 0 || f[i - 1] === ' ') { for (let k = 0; k < t.length; k++) on[i + k] = true; } });
+      let buf = '', state = false;
+      const flush = () => { if (!buf) return; if (state) { const b = document.createElement('mark'); b.textContent = buf; frag.append(b); } else frag.append(buf); buf = ''; };
+      [...name].forEach((c, i) => { if (on[i] !== state) { flush(); state = on[i]; } buf += c; });
+      flush(); return frag;
+    }
+
+    function render(people, q) {
+      list.textContent = ''; empty.classList.add('d-none');
+      if (!people.length) return showMsg('No hay nadie en el directorio que coincida con «' + q + '»');
+      setText('peopleCount', people.length + (people.length === 1 ? ' persona' : ' personas'));
+      people.forEach((p, i) => {
+        const li = document.createElement('li'); li.setAttribute('role', 'option');
+        const b = document.createElement('button'); b.type = 'button'; b.className = 'person';
+        const av = document.createElement('span'); av.className = 'avatar'; av.textContent = initials(p.name);
+        const c = COLORS[[...p.email].reduce((a, ch) => a + ch.charCodeAt(0), 0) % COLORS.length];
+        av.style.background = c; av.style.color = (c === '#D8FF00') ? '#000' : '#fff';
+        const tx = document.createElement('span'); tx.className = 'p-text';
+        const nm = document.createElement('span'); nm.className = 'p-name'; nm.append(mark(p.name, q));
+        const meta = document.createElement('span'); meta.className = 'p-meta'; meta.textContent = (p.dept ? p.dept + ' · ' : '') + p.email;
+        tx.append(nm, meta); b.append(av, tx);
+        b.onclick = () => { $('fName').value = p.name; setPerson(p); hide(); VK.close(); $('fName').blur(); updateConfirm(); };
+        b.style.animationDelay = (i * 30) + 'ms';
+        li.append(b); list.append(li);
+      });
+    }
+
+    async function search() {
+      const q = $('fName').value.trim(), mine = ++seq;
+      box.classList.remove('d-none'); place();
+      if (q.length < 2) return showMsg('Escribe al menos 2 letras de tu nombre o apellido');
+      try {
+        const r = await fetch(api('api/people') + '?q=' + encodeURIComponent(q), { cache: 'no-store' });
+        const people = await r.json();
+        if (mine === seq && !box.classList.contains('d-none')) render(people, q);
+      } catch (e) { if (mine === seq) showMsg('No se puede consultar el directorio ahora mismo'); }
+    }
+
+    if (CFG.directory) {
+      $('fName').placeholder = 'Busca tu nombre…';
+      $('fName').addEventListener('focus', () => { if (!bk.person) search(); });
+      $('fName').addEventListener('input', () => { if (bk.person) setPerson(null); clearTimeout(timer); timer = setTimeout(search, 120); });
+      document.addEventListener('vk:close', hide);
+      addEventListener('resize', () => { if (!box.classList.contains('d-none')) place(); });
+    }
+    return { hide };
   })();
 
   /* =========================================================

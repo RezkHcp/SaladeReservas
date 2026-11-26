@@ -20,7 +20,8 @@ SalaReservas/
 ├─ Services/
 │  ├─ RoomServiceBase.cs         zona horaria, validaciones, bloqueo anti-duplicados
 │  ├─ GraphRoomService.cs        Microsoft Graph (calendario real)
-│  └─ DemoRoomService.cs         datos de ejemplo para probar sin Microsoft 365
+│  ├─ DemoRoomService.cs         datos de ejemplo para probar sin Microsoft 365
+│  └─ DirectoryService.cs        buscador de personas (Active Directory / Entra ID y demo)
 ├─ Views/ (Layout, Index, iconos SVG)
 ├─ wwwroot/ (css, js, fuentes, logo, Bootstrap en local, manifest)
 ├─ deploy/install-iis.ps1        instalador para IIS
@@ -33,10 +34,12 @@ Requiere el SDK de .NET 8.
 
 ```powershell
 cd SalaReservas
-$env:Room__DemoMode = "true"; $env:RequireHttps = "false"; $env:PathBase = "/salareservas"
+$env:ASPNETCORE_ENVIRONMENT = "Development"; $env:Room__DemoMode = "true"; $env:RequireHttps = "false"; $env:PathBase = "/salareservas"
 dotnet run --urls http://localhost:5000
 ```
-Abre <http://localhost:5000/salareservas/>. (En bash: `Room__DemoMode=true RequireHttps=false PathBase=/salareservas dotnet run --urls http://localhost:5000`.)
+Abre <http://localhost:5000/salareservas/>. (En bash: `ASPNETCORE_ENVIRONMENT=Development Room__DemoMode=true RequireHttps=false PathBase=/salareservas dotnet run --urls http://localhost:5000`.)
+
+`ASPNETCORE_ENVIRONMENT=Development` es necesario para poder **reservar** por `http://`: fuera de desarrollo la protección antiforgery exige HTTPS. El modo demo incluye un **directorio de ejemplo** (nombres ficticios) para probar el buscador de personas.
 
 ## 2. Microsoft 365 y Entra ID
 
@@ -76,6 +79,26 @@ Test-ServicePrincipalAuthorization -Identity "SalaReservas" -Resource sala.reuni
 Los cambios pueden tardar entre 30 minutos y 2 horas en aplicarse. Referencia: [Role Based Access Control for Applications in Exchange Online](https://learn.microsoft.com/Exchange/permissions-exo/application-rbac).
 
 *Alternativa clásica:* conceder `Calendars.ReadWrite` (aplicación) con consentimiento de administrador y limitarlo con `New-ApplicationAccessPolicy` a un grupo de seguridad que contenga solo el buzón de la sala.
+
+### 2.4 Buscador de personas (Active Directory / Entra ID) — opcional
+
+Al reservar, el campo **«Tu nombre»** se convierte en un buscador: al escribir 2 letras aparece la lista de personas de la empresa (iniciales, nombre, departamento y correo) y hay que **elegir a alguien de la lista**. El servidor comprueba que esa persona existe en el directorio y guarda su nombre oficial en la reserva.
+
+1. En <https://entra.microsoft.com> → **Registros de aplicaciones › SalaReservas › Permisos de API › Agregar un permiso › Microsoft Graph › Permisos de la aplicación**, añade uno de estos y pulsa **Conceder consentimiento de administrador**:
+   - `User.ReadBasic.All` → nombre y correo (suficiente).
+   - `User.Read.All` → además el **departamento**, y oculta cuentas deshabilitadas e invitados. Con este pon `Directory:FullProfile = true`.
+   
+   > Este permiso es de Microsoft Graph (no de Exchange) y permite leer el perfil de **todas** las personas del inquilino; no da acceso a sus correos ni calendarios.
+2. En `appsettings.Production.json` (o variables de entorno `Directory__Enabled`, etc.):
+   ```json
+   "Directory": { "Enabled": true, "FullProfile": false, "EmailDomain": "hcparquitectos.com", "AddAsAttendee": false }
+   ```
+3. Reinicia el pool de IIS. Si falta el permiso o la configuración de Graph, el buscador se desactiva solo y el campo vuelve a ser texto libre (queda un aviso en el log).
+
+- `EmailDomain` filtra a las personas con correo de ese dominio (y nunca muestra el buzón de la sala).
+- `AddAsAttendee: true` añade a quien reserva como asistente: **recibe la invitación en su Outlook** (la envía el buzón de la sala).
+- La búsqueda usa `$search` de Graph (palabras que empiezan por lo escrito) y se guarda 5 minutos en memoria. En el modo demo la búsqueda ignora las tildes («inigo» encuentra a «Íñigo»); con Entra ID depende de cómo indexe Graph los nombres, así que conviene probarlo con nombres acentuados.
+- `/api/people` está protegida por la misma clave de la tablet (`Kiosk:AccessKey`): desde fuera no se puede consultar el directorio.
 
 ## 3. Publicar en IIS (subcarpeta `/salareservas`)
 
@@ -138,6 +161,11 @@ certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "CA-interna" -i ca.crt
 | `Room:MaxDaysAhead` | 90 | Hasta cuántos días por delante se consulta y reserva |
 | `Room:CreateTeamsMeeting` | false | Añade enlace de Teams (si el buzón lo admite) |
 | `Room:DemoMode` | false | Datos de ejemplo, sin Microsoft 365 |
+| `Directory:Enabled` | false | Buscador de personas de Active Directory (apartado 2.4) |
+| `Directory:FullProfile` | false | `true` con el permiso `User.Read.All`: departamento y solo cuentas activas |
+| `Directory:EmailDomain` | hcparquitectos.com | Solo personas con correo de este dominio |
+| `Directory:AddAsAttendee` | false | Quien reserva recibe la invitación en su Outlook |
+| `Directory:MaxResults` | 6 | Personas que muestra la lista |
 | `Kiosk:AccessKey` | vacío | Clave que debe presentar la tablet (cookie de 1 año) |
 | `PathBase` | vacío | Solo para ejecutar fuera de IIS bajo `/salareservas` |
 | `RequireHttps` | true | Redirige HTTP a HTTPS |
@@ -153,7 +181,8 @@ certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "CA-interna" -i ca.crt
 
 - Credenciales solo en el servidor (Client Credentials); la tablet nunca las ve. Permisos mínimos: un único buzón.
 - **Sin reservas duplicadas:** las reservas se serializan con un bloqueo y la disponibilidad se vuelve a comprobar contra Exchange justo antes de crear el evento (por eso el pool usa **1 proceso**). Si algún día escalas a varios servidores, sustituye el bloqueo por uno distribuido.
-- El servidor valida horario, duración, fecha (no pasadas, máximo de antelación) y título; token antiforgery en cada reserva; HTTPS + HSTS; cabeceras de seguridad.
+- El servidor valida horario, duración, fecha (no pasadas, máximo de antelación), título y **nombre de quien reserva** (obligatorio; con directorio, debe existir en Active Directory); token antiforgery en cada reserva; HTTPS + HSTS; cabeceras de seguridad.
+- El nombre de quien reserva se guarda en una propiedad propia del evento, así la agenda muestra a la persona y no el buzón de la sala.
 - Las horas se calculan siempre en la **hora de la sala** del servidor: no dependen del reloj ni de la zona horaria de la tablet.
 - La pantalla se actualiza cada 30 s y el reloj cada segundo; si nadie toca la tablet durante 90 s vuelve a «Hoy». Recarga de mantenimiento diaria a las 03:00.
 
@@ -167,3 +196,5 @@ certutil -d sql:$HOME/.pki/nssdb -A -t "C,," -n "CA-interna" -i ca.crt
 | Error HTTP 500.19 / 502.5 en IIS | Falta el Hosting Bundle o el pool no es *Sin código administrado* |
 | Horas desplazadas | Revisa `Room:TimeZone` |
 | La tablet muestra «No autorizado» | Abre una vez la URL con `?key=<clave>` |
+| El campo «Tu nombre» no muestra la lista | `Directory:Enabled` en `false`, falta el permiso `User.ReadBasic.All` con consentimiento, o falta `Graph:*` (ver el log) |
+| En modo demo no deja reservar («Error de conexión») | Falta `ASPNETCORE_ENVIRONMENT=Development` al ejecutar por `http://` |

@@ -86,6 +86,7 @@
         <label class="field">
           <span class="eyebrow">Tu nombre</span>
           <input id="fName" class="vk-input" type="text" inputmode="none" maxlength="80" autocomplete="off" placeholder="Nombre y apellido" />
+          <span id="personSel" class="person-sel d-none"></span>
         </label>
         <div id="summary" class="summary"></div>
         <div id="missing" class="missing d-none"></div>
@@ -169,6 +170,13 @@
 </div>
 
 <!-- ===== Teclado táctil integrado ===== -->
+<!-- ===== Buscador de personas del directorio (Active Directory) ===== -->
+<div id="people" class="people d-none" data-keep-kb>
+  <div class="people-head"><span class="eyebrow">Directorio de la empresa</span><span id="peopleCount" class="eyebrow"></span></div>
+  <ul id="peopleList" class="people-list" role="listbox" aria-label="Personas del directorio"></ul>
+  <div id="peopleEmpty" class="people-empty d-none"></div>
+</div>
+
 <div id="vk" class="vk" aria-hidden="true"></div>
 
 @section Scripts {

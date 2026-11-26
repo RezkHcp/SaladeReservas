@@ -28,6 +28,26 @@ public class RoomOptions
 }
 
 /// <summary>
+/// Directorio de la empresa (Active Directory / Microsoft Entra ID) para elegir quién reserva.
+/// </summary>
+public class DirectoryOptions
+{
+    /// <summary>Activa el buscador de personas. Requiere el permiso de Graph User.ReadBasic.All (o User.Read.All).</summary>
+    public bool Enabled { get; set; }
+    /// <summary>true = permiso User.Read.All: muestra el departamento y oculta cuentas deshabilitadas e invitados.</summary>
+    public bool FullProfile { get; set; }
+    /// <summary>Solo personas con correo de este dominio (vacío = cualquiera).</summary>
+    public string EmailDomain { get; set; } = "";
+    /// <summary>Añade a quien reserva como asistente: recibe la invitación en su Outlook.</summary>
+    public bool AddAsAttendee { get; set; }
+    /// <summary>Máximo de resultados en la lista.</summary>
+    public int MaxResults { get; set; } = 6;
+}
+
+/// <summary>Persona del directorio tal como la ve la tablet.</summary>
+public record PersonDto(string Name, string Email, string? Dept);
+
+/// <summary>
 /// Reunión lista para pintar. Todas las horas van ya en la zona horaria de la sala,
 /// así la tablet no depende de su propia zona horaria ni de su reloj.
 /// StartMin/EndMin = minutos desde las 00:00 del día de referencia (0–1440).
@@ -68,6 +88,10 @@ public class BookingRequest
     /// <summary>Nombre de quien reserva (obligatorio).</summary>
     [Required, StringLength(80, MinimumLength = 2)]
     public string Organizer { get; set; } = "";
+
+    /// <summary>Correo de quien reserva, elegido del directorio (obligatorio si el directorio está activo).</summary>
+    [EmailAddress, StringLength(254)]
+    public string? OrganizerEmail { get; set; }
 
     /// <summary>Día en hora de la sala, yyyy-MM-dd.</summary>
     [Required]

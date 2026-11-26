@@ -36,7 +36,8 @@ public abstract class RoomServiceBase : IRoomService
     }
 
     protected abstract Task<List<RawEvent>> QueryEventsAsync(DateTime fromUtc, DateTime toUtc, CancellationToken ct);
-    protected abstract Task<RawEvent> CreateEventAsync(string title, string organizer, DateTime startUtc, DateTime endUtc, CancellationToken ct);
+    /// <param name="organizerEmail">Correo de quien reserva (del directorio) o null.</param>
+    protected abstract Task<RawEvent> CreateEventAsync(string title, string organizer, string? organizerEmail, DateTime startUtc, DateTime endUtc, CancellationToken ct);
     /// <summary>Mensaje si falta configuración; null si todo está listo.</summary>
     protected virtual string? ConfigError => null;
     protected virtual string FriendlyError(Exception ex) => "No se puede leer el calendario. Reintentando…";
@@ -189,7 +190,7 @@ public abstract class RoomServiceBase : IRoomService
             if (clash != null)
                 return new(false, $"La sala ya está reservada de {Hm(ToLocal(clash.StartUtc))} a {Hm(ToLocal(clash.EndUtc))}.");
 
-            var created = await CreateEventAsync(title, organizer, startUtc, endUtc, ct);
+            var created = await CreateEventAsync(title, organizer, req.OrganizerEmail, startUtc, endUtc, ct);
             Log.LogInformation("Reserva creada: {Title} {Start:u}–{End:u} por {Org}", title, startUtc, endUtc, organizer);
             return new(true, "Reserva confirmada.", ToDto(created, day));
         }
