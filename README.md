@@ -41,7 +41,7 @@ Abre <http://localhost:5000/salareservas/>. (En bash: `Room__DemoMode=true Requi
 ## 2. Microsoft 365 y Entra ID
 
 ### 2.1 El buzón
-Comprueba que `sala.reuniones@tudominio.com` existe en Exchange Online (buzón de sala o de usuario). Las reservas se crean **en el calendario de ese buzón**: no envían invitaciones. Para que alguien las vea en su Outlook debe añadir ese calendario (o consultar la sala desde el Buscador de salas).
+Comprueba que `sala.reuniones@hcparquitectos.com` existe en Exchange Online (buzón de sala o de usuario). Las reservas se crean **en el calendario de ese buzón**: no envían invitaciones. Para que alguien las vea en su Outlook debe añadir ese calendario (o consultar la sala desde el Buscador de salas).
 
 > `CreateTeamsMeeting: true` añade un enlace de Teams a cada reserva, pero solo funciona si el buzón admite reuniones online (normalmente un usuario con licencia). En un buzón de sala déjalo en `false`.
 
@@ -60,7 +60,7 @@ Connect-ExchangeOnline
 
 # 1) Ámbito: solo ese buzón
 New-ManagementScope -Name "SalaReservas-Sala" `
-   -RecipientRestrictionFilter "PrimarySmtpAddress -eq 'sala.reuniones@tudominio.com'"
+   -RecipientRestrictionFilter "PrimarySmtpAddress -eq 'sala.reuniones@hcparquitectos.com'"
 
 # 2) Puntero a la aplicación. Los IDs salen de Entra › Aplicaciones empresariales › SalaReservas
 #    (NO los de «Registros de aplicaciones»: son distintos)
@@ -71,7 +71,7 @@ New-ManagementRoleAssignment -App "SalaReservas" -Role "Application Calendars.Re
    -CustomResourceScope "SalaReservas-Sala"
 
 # 4) Comprobación (InScope debe ser True)
-Test-ServicePrincipalAuthorization -Identity "SalaReservas" -Resource sala.reuniones@tudominio.com | Format-Table
+Test-ServicePrincipalAuthorization -Identity "SalaReservas" -Resource sala.reuniones@hcparquitectos.com | Format-Table
 ```
 Los cambios pueden tardar entre 30 minutos y 2 horas en aplicarse. Referencia: [Role Based Access Control for Applications in Exchange Online](https://learn.microsoft.com/Exchange/permissions-exo/application-rbac).
 
@@ -87,7 +87,7 @@ Los cambios pueden tardar entre 30 minutos y 2 horas en aplicarse. Referencia: [
    ```powershell
    .\install-iis.ps1 -SourcePath .\publish `
        -TenantId "<TENANT_ID>" -ClientId "<CLIENT_ID>" `
-       -Mailbox "sala.reuniones@tudominio.com" -KioskKey "<clave-larga-aleatoria>"
+       -Mailbox "sala.reuniones@hcparquitectos.com" -KioskKey "<clave-larga-aleatoria>"
    ```
    Pedirá el secreto de cliente de forma oculta. El script:
    - crea el Application Pool `SalaReservas` (sin código administrado, siempre activo, **un solo proceso**),
